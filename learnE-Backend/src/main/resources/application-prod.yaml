@@ -1,0 +1,21 @@
+# Profile for running behind a Cloudflare Tunnel.
+#
+# The built frontend is served by this same application, so there is no cross-origin traffic and
+# nothing has to be allowed through CORS. Start with: --spring.profiles.active=prod
+
+server:
+  # cloudflared terminates TLS and forwards X-Forwarded-Proto/Host; without this Spring would think
+  # every request arrived over plain HTTP.
+  forward-headers-strategy: framework
+
+app:
+  auth:
+    # Open, but a new account lands in PENDING and cannot be used until an admin approves it — so a
+    # leaked tunnel URL gets someone a waiting room, not access.
+    allow-registration: true
+  cors:
+    # Same origin, so no site needs cross-origin access.
+    allowed-origins: http://localhost
+  jwt:
+    # Deliberately no default — the app refuses to start rather than run on the shared dev secret.
+    secret: ${JWT_SECRET}

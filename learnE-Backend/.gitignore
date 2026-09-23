@@ -1,0 +1,42 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Boya textbook slides used as source material when importing vocabulary and grammar lessons:
+# 105 MB of copyrighted PDFs. No Java code reads them — the import was a one-off run of a script
+# against this folder — so they are kept on disk and out of the repository.
+src/main/resources/slide/
+
+# Build output, not source: deploy/build.ps1 deletes this folder and refills it from
+# learnE-Frontend/dist on every build.
+src/main/resources/static/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

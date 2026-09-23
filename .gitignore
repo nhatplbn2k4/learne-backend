@@ -1,0 +1,11 @@
+# This repository is the backend plus the deployment tooling. The frontend is a separate
+# repository (learne-frontend) cloned side by side in this same folder, because deploy/build.ps1
+# reaches into ../learnE-Frontend/dist to package the UI into the jar.
+learnE-Frontend/
+
+# Database dumps taken before migrations. They contain real user rows — email addresses and
+# bcrypt password hashes — so they stay on disk and out of version control, private repo or not.
+backups/
+
+# Claude Code permission overrides are per-machine, never shared.
+.claude/settings.local.json
