@@ -11,7 +11,20 @@ Web học từ vựng và ngữ pháp cho người Việt, hai ngôn ngữ đíc
 - PostgreSQL 16 trong container Docker `learne-postgres`
 - Chạy thật tại `https://learne.nhatdev.fun` qua Cloudflare Tunnel tên `learne`
 
-Đây **không phải git repo**. Đừng đề xuất branch, commit, PR hay hook pre-commit.
+## Hai repo git riêng
+
+| Thư mục | Repo (riêng tư) |
+|---|---|
+| gốc dự án — backend + `deploy/` + `docker-compose.yml` + `CLAUDE.md` + `.claude/` | `nhatplbn2k4/learne-backend` |
+| `learnE-Frontend/` | `nhatplbn2k4/learne-frontend` |
+
+Repo backend đặt gốc ở **thư mục dự án**, không ở `learnE-Backend/`, vì `deploy/build.ps1` với đến `../learnE-Frontend/dist`. Hai thư mục **phải nằm cạnh nhau** trên đĩa; clone riêng một repo là không build được. `learnE-Frontend/` bị `.gitignore` của repo backend loại ra.
+
+**Commit không gắn dòng đồng tác giả hay attribution nào.**
+
+Tài khoản GitHub bật email privacy nên đẩy bằng email thật sẽ bị từ chối. Cả hai repo đã đặt `user.email` cục bộ thành `149066175+nhatplbn2k4@users.noreply.github.com`; cấu hình git toàn cục giữ nguyên.
+
+Ba thứ **cố ý không lên git**, đừng "sửa" lại: `src/main/resources/slide/` (105 MB PDF giáo trình có bản quyền, không mã nào đọc), `src/main/resources/static/` (sản phẩm build, `build.ps1` xoá rồi tạo lại), `backups/` (dump DB có email và hash mật khẩu thật).
 
 ## Xây dựng và chạy
 
