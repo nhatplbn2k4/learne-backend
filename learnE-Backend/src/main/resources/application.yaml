@@ -38,6 +38,10 @@ app:
       model: ${GEMINI_MODEL:gemini-3.5-flash}
       # Model nhẹ, quota free tier lớn hơn nhiều — dùng khi sinh từ vựng hàng loạt.
       bulk-model: ${GEMINI_BULK_MODEL:gemini-3.5-flash-lite}
+      # Chấm bài là lần gọi duy nhất người học phải ngồi chờ, nên ưu tiên model nhanh
+      # (~1.6s so với ~8s). Hết quota thì tự rơi về `model`. Tách riêng khỏi bulk-model để
+      # đổi cách sinh từ vựng không vô tình đổi cách chấm.
+      grading-model: ${GEMINI_GRADING_MODEL:gemini-3.5-flash-lite}
       # Free tier tính quota riêng cho từng model, nên hết quota một model không được làm chết
       # tính năng. Client tự chuyển sang model kế tiếp; danh sách này là các model bổ sung, thử
       # sau `model` và `bulk-model`.

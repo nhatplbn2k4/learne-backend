@@ -126,7 +126,8 @@ public class WritingService {
                 """.formatted(prompt.getLevel(), prompt.getInstructions(), content);
 
         try {
-            String rawJson = geminiClient.generateJson(aiPrompt);
+            // Marking a learner's work, so it follows the same model choice as sentence grading.
+            String rawJson = geminiClient.generateJson(aiPrompt, geminiClient.gradingModel());
             return objectMapper.readValue(rawJson, WritingFeedbackDto.class);
         } catch (Exception ex) {
             log.warn("Gemini writing feedback failed", ex);

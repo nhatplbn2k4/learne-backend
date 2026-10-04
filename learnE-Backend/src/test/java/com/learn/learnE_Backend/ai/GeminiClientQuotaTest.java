@@ -42,8 +42,10 @@ class GeminiClientQuotaTest {
               ]}}
             """;
 
+    /** Grading defaults to the same model as bulk work, so the chain here stays four long. */
     private static GeminiClient client() {
-        return new GeminiClient(WebClient.builder(), "test-key", "flash", "flash-lite", "pro,legacy");
+        return new GeminiClient(
+                WebClient.builder(), "test-key", "flash", "flash-lite", "flash-lite", "pro,legacy");
     }
 
     private static GeminiException perMinuteFailure() {
@@ -142,6 +144,24 @@ class GeminiClientQuotaTest {
         client.rememberFailure("flash", new GeminiException("mang loi", null, 0));
 
         assertThat(client.modelChain("flash")).startsWith("flash");
+    }
+
+    /**
+     * Grading runs on its own model so a slow marking call cannot be sped up by accident when the
+     * bulk model changes — and when that model is rate-limited, marking still falls back to the
+     * others rather than failing. A learner waiting on a score must always get one.
+     */
+    @Test
+    void aSeparateGradingModelLeadsItsOwnChainAndStillFallsBack() {
+        GeminiClient client = new GeminiClient(
+                WebClient.builder(), "test-key", "flash", "bulk", "grader", "pro");
+
+        assertThat(client.gradingModel()).isEqualTo("grader");
+        assertThat(client.modelChain(client.gradingModel()))
+                .containsExactly("grader", "flash", "bulk", "pro");
+
+        client.markDailyQuotaExhausted("grader");
+        assertThat(client.modelChain(client.gradingModel())).startsWith("flash");
     }
 
     @Test

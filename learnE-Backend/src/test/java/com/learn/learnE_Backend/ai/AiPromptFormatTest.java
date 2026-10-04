@@ -34,7 +34,7 @@ class AiPromptFormatTest {
     /** No api-key property, so isConfigured() is false and nothing leaves the machine. */
     private static AiContentService service() {
         return new AiContentService(
-                new GeminiClient(WebClient.builder(), "", "flash", "flash-lite", ""));
+                new GeminiClient(WebClient.builder(), "", "flash", "flash-lite", "flash-lite", ""));
     }
 
     /** Formatting ran and the only thing left to stop us was the missing key. */

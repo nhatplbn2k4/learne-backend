@@ -52,6 +52,7 @@ public class GeminiClient {
     private final String apiKey;
     private final String model;
     private final String bulkModel;
+    private final String gradingModel;
     private final List<String> extraFallbacks;
 
     /**
@@ -71,12 +72,14 @@ public class GeminiClient {
             @Value("${app.ai.gemini.api-key:}") String apiKey,
             @Value("${app.ai.gemini.model:gemini-3.5-flash}") String model,
             @Value("${app.ai.gemini.bulk-model:gemini-3.5-flash-lite}") String bulkModel,
+            @Value("${app.ai.gemini.grading-model:gemini-3.5-flash-lite}") String gradingModel,
             @Value("${app.ai.gemini.fallback-models:}") String fallbackModels
     ) {
         this.webClient = webClientBuilder.baseUrl("https://generativelanguage.googleapis.com").build();
         this.apiKey = apiKey;
         this.model = model;
         this.bulkModel = bulkModel;
+        this.gradingModel = gradingModel;
         this.extraFallbacks = Arrays.stream(fallbackModels.split(","))
                 .map(String::trim)
                 .filter(name -> !name.isEmpty())
@@ -114,6 +117,19 @@ public class GeminiClient {
     /** Lighter model for high-volume work (bulk vocabulary), which has a far larger free-tier quota. */
     public String bulkModel() {
         return bulkModel;
+    }
+
+    /**
+     * Model used to mark a learner's answer.
+     *
+     * <p>Separate from {@link #model} because grading is the one call a learner waits on: the heavier
+     * model writes deeper feedback but took around 8s against roughly 1.6s, and a pause that long
+     * between answering and seeing the score is felt on every single sentence. Separate from
+     * {@link #bulkModel} too, even though both default to the same lighter model, so that changing
+     * how vocabulary is generated in bulk never silently changes how answers are marked.
+     */
+    public String gradingModel() {
+        return gradingModel;
     }
 
     public String generateJson(String prompt) {
@@ -165,7 +181,7 @@ public class GeminiClient {
     List<String> modelChain(String startModel) {
         List<String> chain = new ArrayList<>();
         for (String candidate : Stream.concat(
-                Stream.of(startModel, model, bulkModel), extraFallbacks.stream()).toList()) {
+                Stream.of(startModel, model, gradingModel, bulkModel), extraFallbacks.stream()).toList()) {
             if (candidate != null && !candidate.isBlank() && !chain.contains(candidate)) {
                 chain.add(candidate);
             }

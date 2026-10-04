@@ -496,6 +496,17 @@ public class AiContentService {
                 Gặp những chỗ đó: giữ nguyên điểm, KHÔNG đưa vào "corrections", KHÔNG bình luận
                 "tuỳ ngữ cảnh". Bản dịch tham khảo chỉ là MỘT cách chọn, không phải đáp án duy nhất.
 
+                KÉM MƯỢT HƠN KHÔNG PHẢI LÀ SAI. "corrections" chỉ dành cho lỗi thật sự làm câu sai;
+                một cách nói đúng ngữ pháp nhưng kém tự nhiên hơn thì KHÔNG được đưa vào đó và
+                KHÔNG bị trừ điểm. Nhiều thành phần trong tiếng Trung là tuỳ chọn:
+                - 的 giữa danh từ và phương vị từ hai âm tiết: 超市的西边 và 超市西边 ĐỀU ĐÚNG.
+                - Lượng từ khi có nhiều lựa chọn chấp nhận được: 一个书店 và 一家书店 đều dùng được.
+                - 边 / 面 / 边儿, có hay không nhi hoá.
+                - Trật tự trạng ngữ khi cả hai trật tự đều tự nhiên.
+                Muốn gợi ý cách nói mượt hơn thì đặt vào "betterVersion" — đó mới là chỗ dành cho
+                văn phong. Trước khi viết một mục "corrections", tự hỏi: người bản ngữ có coi câu
+                này là SAI không, hay chỉ là họ sẽ nói khác đi? Nếu chỉ là nói khác đi thì bỏ qua.
+
                 %s
 
                 Trả lời DUY NHẤT bằng JSON theo đúng cấu trúc, không thêm text nào khác:
@@ -539,7 +550,10 @@ public class AiContentService {
                 isChinese ? "pinyin có dấu thanh của betterVersion, để trống nếu không có" : "để trống");
 
         try {
-            return objectMapper.readValue(geminiClient.generateJson(prompt), SentenceFeedbackDto.class);
+            // The learner is watching a spinner until this returns, so it runs on the grading model.
+            return objectMapper.readValue(
+                    geminiClient.generateJson(prompt, geminiClient.gradingModel()),
+                    SentenceFeedbackDto.class);
         } catch (Exception ex) {
             log.warn("Gemini sentence grading failed", ex);
             return SentenceFeedbackDto.unavailable(
@@ -597,6 +611,11 @@ public class AiContentService {
                 ngữ cảnh. "bạn ấy"/"người ấy" thì 他 và 她 đều đúng; số ít/số nhiều, cách xưng hô khi
                 đề không nói rõ cũng vậy. Đừng đưa vào "corrections", đừng bình luận "tuỳ ngữ cảnh".
 
+                KÉM MƯỢT HƠN KHÔNG PHẢI LÀ SAI. "corrections" chỉ dành cho lỗi thật sự làm câu sai.
+                Thành phần tuỳ chọn thì không tính là lỗi: 的 giữa danh từ và phương vị từ hai âm
+                tiết (超市的西边 và 超市西边 ĐỀU ĐÚNG), lượng từ có nhiều lựa chọn được (一个书店 /
+                一家书店), 边 / 面 / 边儿. Gợi ý cách nói mượt hơn thì để vào "betterVersion".
+
                 %s
 
                 Trả lời DUY NHẤT bằng JSON, đúng %s phần tử, theo thứ tự "index" tăng dần:
@@ -629,7 +648,7 @@ public class AiContentService {
                 "đủ số",
                 isChinese ? " bằng chữ Hán" : "");
 
-        return callAndParse(prompt, GradedSentencesDto.class);
+        return callAndParse(prompt, GradedSentencesDto.class, geminiClient.gradingModel());
     }
 
     private static String formatList(List<String> items, String emptyText) {
