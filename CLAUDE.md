@@ -41,15 +41,17 @@ Ba thứ **cố ý không lên git**, đừng "sửa" lại: `src/main/resources
 
 Mọi file `.ps1` phải lưu **UTF-8 có BOM**, nếu không tiếng Việt trong script hỏng. Kiểm tra: `head -c 3 file.ps1 | xxd -p` phải ra `efbbbf`.
 
-## Bốn cái bẫy đã trả giá
+## Năm cái bẫy đã trả giá
 
-**1. `mvnw compile` không chứng minh được gì.** Biên dịch tăng dần báo thành công trên mã hỏng (`\p{IsHan}` thiếu một dấu `\` đã lọt qua). Và `./mvnw -q compile | head -10; echo $?` đọc mã thoát của `head`, không phải của Maven. Chỉ `./mvnw test` hoặc `deploy\build.ps1` (có `clean`) mới là bằng chứng.
+**1. `mvnw test` ghi thẳng vào DB production.** Không có `src/test/resources`, và `LearnEBackendApplicationTests` là `@SpringBootTest` không ghi đè profile — nên test dùng `application.yaml`, tức `localhost:5432/learne`, đúng DB thật trong container. **Chạy test là apply migration mới vào dữ liệu thật ngay lập tức.** Trước khi thêm migration: `docker exec learne-postgres pg_dump -U learne learne > backups/...sql`, và giữ migration thuần additive (`ADD COLUMN` có DEFAULT), không bao giờ `DROP`/`UPDATE`.
 
-**2. Heredoc trong Bash ăn mất dấu thoát.** `\n`, `\\p` trong heredoc bị biến dạng, sinh ra chuỗi Java hỏng — đã làm sập app. Nội dung có dấu thoát thì dùng công cụ Write/Edit, không dùng heredoc.
+**2. `mvnw compile` không chứng minh được gì.** Biên dịch tăng dần báo thành công trên mã hỏng (`\p{IsHan}` thiếu một dấu `\` đã lọt qua). Và `./mvnw -q compile | head -10; echo $?` đọc mã thoát của `head`, không phải của Maven. Chỉ `./mvnw test` hoặc `deploy\build.ps1` (có `clean`) mới là bằng chứng.
 
-**3. `ddl-auto: validate`.** Entity và migration Flyway phải lên cùng lúc, lệch một cái là app không khởi động. **Không sửa** V1–V18 đã chạy (Flyway kiểm checksum); `target/classes/db/migration` có bản sao cũ — build lại chứ đừng sửa tay ở đó.
+**3. Heredoc trong Bash ăn mất dấu thoát.** `\n`, `\\p` trong heredoc bị biến dạng, sinh ra chuỗi Java hỏng — đã làm sập app. Nội dung có dấu thoát thì dùng công cụ Write/Edit, không dùng heredoc.
 
-**4. Có ba hình dạng "correction" song song.** Sửa một chỗ là thiếu hai chỗ:
+**4. `ddl-auto: validate`.** Entity và migration Flyway phải lên cùng lúc, lệch một cái là app không khởi động. **Không sửa** V1–V18 đã chạy (Flyway kiểm checksum); `target/classes/db/migration` có bản sao cũ — build lại chứ đừng sửa tay ở đó.
+
+**5. Có ba hình dạng "correction" song song.** Sửa một chỗ là thiếu hai chỗ:
 - `sentence/dto/SentenceFeedbackDto.SentenceCorrectionDto` — chấm từng câu
 - `ai/dto/GradedSentencesDto.CorrectionDto` — chấm cả bài thi vượt
 - `writing/dto/CorrectionDto` — phần luyện viết
@@ -60,7 +62,11 @@ Các DTO phản hồi đều có `@JsonIgnoreProperties(ignoreUnknown = true)` n
 
 Ngôn ngữ nằm trên `Topic`; `Course.getLanguage()` chỉ uỷ quyền xuống. Đừng thêm cột ngôn ngữ vào `Course`.
 
-Tiếng Trung có 7 kiểu luyện, tiếng Anh 5 — xem `LanguageModes.java`, và `MODES_BY_LANGUAGE` ở frontend **phải khớp**. Một từ được tính thuộc lòng khi trả lời đúng ở mọi kiểu trong **cùng một buổi** (`session_correct_modes`).
+Danh sách kiểu luyện do **backend** quyết định và đi xuống frontend qua `DaySessionDto.practiceModes`. `LanguageModes.requiredFor(Course)` là **điểm vào duy nhất**: mặc định theo ngôn ngữ (tiếng Trung 7, tiếng Anh 5), ghi đè theo khoá bằng cột `courses.practice_modes` (**rỗng = dùng mặc định**, không phải "không kiểu nào"). Frontend **không còn bản sao nào** của danh sách này — đừng tạo lại.
+
+Lý do phải một nguồn: một từ chỉ thuộc lòng khi đúng ở **mọi kiểu bắt buộc trong cùng một buổi** (`session_correct_modes`). Hỏi ít kiểu hơn số kiểu đem đi chấm thì từ **không bao giờ** thuộc được → không bao giờ mở luyện dịch, thẻ ngày vĩnh viễn ⚠️.
+
+Khoá học có ba nút điều chỉnh hành vi, mặc định tái lập đúng hành vi cũ: `practice_modes` (rỗng), `sentence_translation_enabled` (bật, vẫn AND với cờ ngôn ngữ), `days_always_unlocked` (tắt). Khoá "Bộ thủ Hán tự" dùng cả ba.
 
 Khoá học có `kind`: `VOCABULARY` (chia theo ngày) hoặc `GRAMMAR` (chia theo bài). `GET /api/courses` mặc định `kind=VOCABULARY` — bỏ mặc định là khoá ngữ pháp lọt vào danh sách từ vựng.
 
@@ -80,7 +86,17 @@ Khi khôi phục vị trí cuộn: cleanup của `useEffect` chạy **sau** khi 
 
 Quota free tier tính **theo project, không theo người dùng** — hai người dùng cùng lúc chạy song song bình thường, thứ khan hiếm là quota chung. Quota ngày reset lúc 14:00 giờ Việt Nam.
 
-`gemini-3.5-flash` là model chấm bài (chậm hơn, phản hồi sâu hơn), `gemini-3.5-flash-lite` cho việc hàng loạt. `GeminiClient` nhớ model nào đang hỏng và tự chuyển — đừng thêm vòng thử lại bên ngoài nó.
+Có **ba** thuộc tính model, đừng gộp:
+
+| Thuộc tính | Mặc định | Dùng ở đâu |
+|---|---|---|
+| `app.ai.gemini.grading-model` | `gemini-3.5-flash-lite` | Chấm câu dịch, chấm bài thi vượt, chấm bài viết |
+| `app.ai.gemini.bulk-model` | `gemini-3.5-flash-lite` | Sinh từ vựng, sinh câu, gắn thẻ ngữ pháp, sinh bài ngữ pháp |
+| `app.ai.gemini.model` | `gemini-3.5-flash` | Sinh bài đọc, sinh đề luyện viết — và là nấc dự phòng cho hai cái trên |
+
+Chấm bài tách riêng vì đó là lần gọi duy nhất người học phải ngồi chờ (~1,6s so với ~8s). Hai cái đầu **trùng giá trị mặc định nhưng không được gộp**: đổi cách sinh từ vựng hàng loạt không được vô tình đổi cách chấm bài.
+
+`GeminiClient` nhớ model nào đang hỏng và tự chuyển — đừng thêm vòng thử lại bên ngoài nó.
 
 ## Skill có sẵn
 
