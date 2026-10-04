@@ -16,6 +16,10 @@ public record AdminCourseDto(
         String title,
         String description,
         int sortOrder,
+        /** Empty means the course uses its language's default set. */
+        java.util.Set<com.learn.learnE_Backend.vocabulary.PracticeMode> practiceModes,
+        boolean sentenceTranslationEnabled,
+        boolean daysAlwaysUnlocked,
         int lessonDayCount
 ) {
     public static AdminCourseDto from(Course course, int lessonDayCount) {
@@ -30,6 +34,9 @@ public record AdminCourseDto(
                 course.getTitle(),
                 course.getDescription(),
                 course.getSortOrder(),
+                course.getPracticeModes(),
+                course.isSentenceTranslationEnabled(),
+                course.isDaysAlwaysUnlocked(),
                 lessonDayCount
         );
     }

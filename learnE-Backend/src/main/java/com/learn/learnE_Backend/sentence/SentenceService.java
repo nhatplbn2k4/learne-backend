@@ -82,7 +82,7 @@ public class SentenceService {
         int totalWords = (int) wordRepository.countByLessonDay_Id(lessonDayId);
         int masteredWords = (int) wordProgressRepository
                 .countByUser_IdAndWord_LessonDay_IdAndMasteredTrue(user.getId(), lessonDayId);
-        String lockedReason = lockReason(totalWords, masteredWords);
+        String lockedReason = lockReason(lessonDay.getCourse(), totalWords, masteredWords);
 
         // Resolved once per day rather than per sentence: both sets are the same for all of them.
         Language language = lessonDay.getCourse().getLanguage();
@@ -115,7 +115,12 @@ public class SentenceService {
     }
 
     /** Translation opens only once every word of the day is fully mastered. */
-    private static String lockReason(int totalWords, int masteredWords) {
+    private static String lockReason(Course course, int totalWords, int masteredWords) {
+        // Some courses have nothing to translate at all - a course of radicals, for instance.
+        // Checked here rather than only in the UI so a direct API call gets the same answer.
+        if (!course.isSentenceTranslationEnabled()) {
+            return "Khoá học này không có phần luyện dịch câu";
+        }
         if (totalWords == 0) {
             return "Ngày này chưa có từ vựng nào";
         }
@@ -309,7 +314,7 @@ public class SentenceService {
         int totalWords = (int) wordRepository.countByLessonDay_Id(lessonDayId);
         int masteredWords = (int) wordProgressRepository
                 .countByUser_IdAndWord_LessonDay_IdAndMasteredTrue(user.getId(), lessonDayId);
-        String lockedReason = lockReason(totalWords, masteredWords);
+        String lockedReason = lockReason(exercise.getLessonDay().getCourse(), totalWords, masteredWords);
         if (lockedReason != null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, lockedReason);
         }

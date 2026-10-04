@@ -31,6 +31,12 @@ public class VocabularyController {
         return vocabularyService.listCourses(user.getId(), language, kind);
     }
 
+    /** One course by id, for screens that arrive with nothing but the id in hand. */
+    @GetMapping("/courses/{courseId}")
+    public CourseSummaryDto course(@AuthenticationPrincipal User user, @PathVariable Long courseId) {
+        return vocabularyService.getCourse(user.getId(), courseId);
+    }
+
     @PostMapping("/courses/{courseId}/enroll")
     public EnrollmentDto enroll(@AuthenticationPrincipal User user, @PathVariable Long courseId) {
         return vocabularyService.enroll(user, courseId);

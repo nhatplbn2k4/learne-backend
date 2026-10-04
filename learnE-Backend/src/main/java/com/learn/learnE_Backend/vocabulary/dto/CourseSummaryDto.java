@@ -15,7 +15,10 @@ public record CourseSummaryDto(
         String levelLabel,
         String title,
         String description,
-        boolean enrolled
+        boolean enrolled,
+        /** Still gated by the language first; a course can only turn the feature off. */
+        boolean sentenceTranslationEnabled,
+        boolean daysAlwaysUnlocked
 ) {
     public static CourseSummaryDto from(Course course, boolean enrolled) {
         return new CourseSummaryDto(
@@ -27,7 +30,9 @@ public record CourseSummaryDto(
                 course.getLevelLabel(),
                 course.getTitle(),
                 course.getDescription(),
-                enrolled
+                enrolled,
+                course.isSentenceTranslationEnabled(),
+                course.isDaysAlwaysUnlocked()
         );
     }
 }

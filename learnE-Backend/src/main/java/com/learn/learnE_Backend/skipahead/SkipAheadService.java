@@ -98,7 +98,7 @@ public class SkipAheadService {
 
     @Transactional(readOnly = true)
     public SkipAheadStatusDto status(User user, Long courseId, int targetDayNumber) {
-        requireChineseCourse(courseId);
+        requireSentenceCourse(courseId);
         // Sitting an exam for a course you never enrolled in makes no sense, and starting one can
         // spend an AI call, so the check belongs here rather than only at the point of unlocking.
         enrollmentRepository.findByUser_IdAndCourse_Id(user.getId(), courseId)
@@ -164,7 +164,7 @@ public class SkipAheadService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, status.reason());
         }
 
-        Course course = requireChineseCourse(courseId);
+        Course course = requireSentenceCourse(courseId);
         List<LessonDay> priorDays = daysBefore(courseId, targetDayNumber);
 
         SkipAheadTest test = SkipAheadTest.builder()
@@ -402,11 +402,18 @@ public class SkipAheadService {
 
     // ---- Helpers ----
 
-    private Course requireChineseCourse(Long courseId) {
+    private Course requireSentenceCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy khoá học"));
         if (course.getLanguage() != Language.CHINESE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thi vượt chỉ áp dụng cho khoá tiếng Trung");
+        }
+        // The exam is built out of the course's translation sentences, so a course without them
+        // has nothing to set. Unreachable from the UI, which hides the button - this is for
+        // anyone calling the API directly, who would otherwise get an empty paper.
+        if (!course.isSentenceTranslationEnabled()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Khoá học này không có bài luyện dịch để thi vượt");
         }
         return course;
     }

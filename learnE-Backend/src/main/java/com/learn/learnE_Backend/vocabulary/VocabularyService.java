@@ -73,6 +73,23 @@ public class VocabularyService {
                 .toList();
     }
 
+    /**
+     * One course on its own, for screens that arrive holding nothing but an id.
+     *
+     * <p>The day list reaches the learner from two places — the course list and the dashboard's
+     * "continue" card — and only one of them has the course to hand. Fetching by id keeps both
+     * entry points identical instead of threading the course's settings through every screen.
+     */
+    @Transactional(readOnly = true)
+    public CourseSummaryDto getCourse(Long userId, Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy khoá học"));
+        boolean enrolled = enrollmentRepository.findByUser_IdAndCourse_Id(userId, courseId)
+                .filter(e -> e.getCompletedAt() == null)
+                .isPresent();
+        return CourseSummaryDto.from(course, enrolled);
+    }
+
     @Transactional
     public EnrollmentDto enroll(User user, Long courseId) {
         return enrollmentRepository.findByUser_IdAndCourse_Id(user.getId(), courseId)
@@ -178,7 +195,8 @@ public class VocabularyService {
         // Anything other than "forgot/wrong" still counts as recalling the word correctly.
         boolean answeredCorrectly = request.quality() != ReviewQuality.AGAIN;
         progress.setModeMastered(request.mode(), answeredCorrectly);
-        if (progress.isAllModesCorrectThisSession(LanguageModes.requiredFor(word.getLanguage()))) {
+        Course course = word.getLessonDay().getCourse();
+        if (progress.isAllModesCorrectThisSession(LanguageModes.requiredFor(course))) {
             progress.setMastered(true);
         }
 
@@ -288,6 +306,10 @@ public class VocabularyService {
     }
 
     private String lockReason(Long userId, LessonDay day, int skipAheadDayNumber) {
+        // A course can open every day at once: nothing to finish first, no waiting for tomorrow.
+        if (day.getCourse().isDaysAlwaysUnlocked()) {
+            return null;
+        }
         if (day.getDayNumber() <= 1) {
             return null;
         }
@@ -377,16 +399,20 @@ public class VocabularyService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, dayInfo.lockedReason());
         }
 
-        // Resolve the language once for the whole day rather than per word.
-        Language language = lessonDay.getCourse().getLanguage();
+        // Resolve the language and the course's mode list once for the whole day rather than
+        // per word. The same list goes to the client, so the questions it asks and the mastery
+        // check below can never drift apart.
+        Course course = lessonDay.getCourse();
+        Language language = course.getLanguage();
+        List<PracticeMode> modes = LanguageModes.requiredFor(course);
 
         List<PracticeWordDto> words = wordRepository.findByLessonDay_Id(lessonDayId).stream()
-                .map(word -> PracticeWordDto.from(word, pendingModesFor(user.getId(), word.getId(), language)))
+                .map(word -> PracticeWordDto.from(word, pendingModesFor(user.getId(), word.getId(), modes)))
                 .toList();
 
         return new DaySessionDto(
                 lessonDay.getId(), lessonDay.getDayNumber(), lessonDay.getTitle(),
-                lessonDay.getCourse().getTitle(), language, words,
+                course.getTitle(), language, modes, course.isSentenceTranslationEnabled(), words,
                 sentenceService.statsForDay(user.getId(), lessonDayId)
         );
     }
@@ -395,11 +421,11 @@ public class VocabularyService {
      * Mastery is per session, so an unmastered word always needs the full set of modes again —
      * ticks earned in an earlier session no longer shorten the list.
      */
-    private List<PracticeMode> pendingModesFor(Long userId, Long wordId, Language language) {
+    private List<PracticeMode> pendingModesFor(Long userId, Long wordId, List<PracticeMode> courseModes) {
         boolean mastered = wordProgressRepository.findByUser_IdAndWord_Id(userId, wordId)
                 .map(UserWordProgress::isFullyMastered)
                 .orElse(false);
-        return mastered ? List.of() : LanguageModes.requiredFor(language);
+        return mastered ? List.of() : courseModes;
     }
 
     // ---- Admin content management ----
@@ -442,6 +468,9 @@ public class VocabularyService {
                 .sortOrder(request.sortOrder() == null ? 0 : request.sortOrder())
                 .title(request.title())
                 .description(request.description())
+                .practiceModes(request.practiceModesOrEmpty())
+                .sentenceTranslationEnabled(request.sentenceTranslationEnabledOrDefault())
+                .daysAlwaysUnlocked(request.daysAlwaysUnlockedOrDefault())
                 .build();
         Course saved = courseRepository.save(course);
         return AdminCourseDto.from(saved, 0);
