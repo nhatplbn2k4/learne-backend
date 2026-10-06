@@ -46,9 +46,11 @@ public class StatsService {
         List<UserCourseEnrollment> enrollments = enrollmentRepository.findByUser_Id(userId).stream()
                 .filter(e -> language == null || e.getCourse().getLanguage() == language)
                 .toList();
-        int longestStreak = enrollments.stream().mapToInt(UserCourseEnrollment::getStreakCount).max().orElse(0);
-
         LocalDate today = LocalDate.now();
+        // Best of the courses on each measure: one run still going is enough to call the learner
+        // on a streak, and the record stands whichever course set it.
+        int currentStreak = enrollments.stream().mapToInt(e -> e.currentStreak(today)).max().orElse(0);
+        int longestStreak = enrollments.stream().mapToInt(UserCourseEnrollment::getLongestStreak).max().orElse(0);
         long totalWordsLearned;
         long wordsMastered;
         long wordsDueToday;
@@ -91,6 +93,7 @@ public class StatsService {
                 (int) totalWordsLearned,
                 (int) wordsMastered,
                 (int) wordsDueToday,
+                currentStreak,
                 longestStreak,
                 readingAttempts.size(),
                 readingAverage,

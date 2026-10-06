@@ -131,7 +131,7 @@ public class VocabularyService {
             return new EnrollmentSessionDto(
                     enrollment.getId(), course.getId(), course.getTitle(),
                     enrollment.getCurrentDayNumber(), null, true, true, false, null,
-                    enrollment.getStreakCount(), 0, 0, masteredWords, totalWords
+                    enrollment.currentStreak(LocalDate.now()), 0, 0, masteredWords, totalWords
             );
         }
 
@@ -153,7 +153,7 @@ public class VocabularyService {
                 enrollment.getId(), course.getId(), course.getTitle(),
                 currentDay.dayNumber(), currentDay.title(), false, currentDay.completed(),
                 currentDay.unlocked(), currentDay.lockedReason(),
-                enrollment.getStreakCount(),
+                enrollment.currentStreak(LocalDate.now()),
                 currentDay.wordCount() - currentDay.masteredWordCount(), dueReviewCount,
                 masteredWords, totalWords
         );
@@ -239,6 +239,8 @@ public class VocabularyService {
             enrollment.setStreakCount(1);
         }
         enrollment.setLastStudyDate(today);
+        // The record only ever rises, so a broken run never costs the learner their best.
+        enrollment.setLongestStreak(Math.max(enrollment.getLongestStreak(), enrollment.getStreakCount()));
         if (enrollment.getCurrentDayNumber() == lessonDay.getDayNumber()) {
             enrollment.setCurrentDayNumber(enrollment.getCurrentDayNumber() + 1);
         }

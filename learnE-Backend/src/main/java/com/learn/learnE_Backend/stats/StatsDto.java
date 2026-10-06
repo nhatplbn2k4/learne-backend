@@ -12,6 +12,9 @@ public record StatsDto(
         int totalWordsLearned,
         int wordsMastered,
         int wordsDueToday,
+        /** Days running right now across every course; zero once the last one lapsed. */
+        int currentStreak,
+        /** Best run ever reached. Unlike the current one, this never falls. */
         int longestStreak,
         int readingAttemptsCount,
         Double readingAverageScorePercent,
