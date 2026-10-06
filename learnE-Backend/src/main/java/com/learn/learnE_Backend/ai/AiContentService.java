@@ -507,6 +507,19 @@ public class AiContentService {
                 văn phong. Trước khi viết một mục "corrections", tự hỏi: người bản ngữ có coi câu
                 này là SAI không, hay chỉ là họ sẽ nói khác đi? Nếu chỉ là nói khác đi thì bỏ qua.
 
+                NHẬN XÉT PHẢI KHỚP VỚI CHỖ SỬA. "comment" chỉ được nói về đúng những thay đổi có
+                trong "corrections" và "betterVersion". TUYỆT ĐỐI không nêu tên một chữ Hán hay một
+                cấu trúc không xuất hiện trong "suggestion" hoặc "betterVersion" — kể cả khi đó là
+                một quy tắc đúng trong trường hợp khác. Trước khi nộp, đọc lại "comment" và kiểm:
+                mọi chữ Hán bạn nhắc tới có thật sự nằm trong phần bạn đề nghị sửa thành không?
+                Nếu không thì xoá câu đó đi.
+                Ví dụ phải tránh: bài làm 孩子都到电影院, bạn sửa thành 去 nhưng lại viết nhận xét
+                "cần dùng giới từ 在" — 在 không có trong chỗ sửa, và 在 chỉ nơi chốn tĩnh nên dùng
+                ở đây là sai nghĩa. Nhận xét đúng phải nói về 去 / 到...去, tức đúng cái bạn đã sửa.
+
+                Khi bài làm không có lỗi nào, "corrections" rỗng và "comment" chỉ khen hoặc nêu
+                nhận xét về văn phong — không được bịa ra một quy tắc để tỏ ra có gì đó phải sửa.
+
                 %s
 
                 Trả lời DUY NHẤT bằng JSON theo đúng cấu trúc, không thêm text nào khác:
@@ -615,6 +628,11 @@ public class AiContentService {
                 Thành phần tuỳ chọn thì không tính là lỗi: 的 giữa danh từ và phương vị từ hai âm
                 tiết (超市的西边 và 超市西边 ĐỀU ĐÚNG), lượng từ có nhiều lựa chọn được (一个书店 /
                 一家书店), 边 / 面 / 边儿. Gợi ý cách nói mượt hơn thì để vào "betterVersion".
+
+                NHẬN XÉT PHẢI KHỚP VỚI CHỖ SỬA. "comment" chỉ nói về đúng thay đổi có trong
+                "corrections" và "betterVersion". Không nêu tên chữ Hán hay cấu trúc không xuất
+                hiện ở "suggestion" hoặc "betterVersion", kể cả khi đó là quy tắc đúng ở trường
+                hợp khác. Không có lỗi thì đừng bịa quy tắc để tỏ ra có gì phải sửa.
 
                 %s
 
