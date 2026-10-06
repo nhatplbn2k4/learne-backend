@@ -7,5 +7,10 @@ learnE-Frontend/
 # bcrypt password hashes — so they stay on disk and out of version control, private repo or not.
 backups/
 
+# Personal documents that happen to be sitting in the project folder. A CV carries a phone
+# number, an address and a date of birth; nothing about it belongs in a code repository, private
+# or not, and one `git add -A` would put it there.
+*.pdf
+
 # Claude Code permission overrides are per-machine, never shared.
 .claude/settings.local.json
