@@ -44,7 +44,10 @@ public class GeminiClient {
     private static final Duration DEFAULT_RATE_LIMIT_PAUSE = Duration.ofSeconds(30);
     private static final Pattern RETRY_HINT = Pattern.compile("retry in ([0-9.]+)s");
 
-    /** Google's free-tier daily quotas reset at midnight Pacific Time, not local midnight. */
+    /**
+     * Google's free-tier daily quotas reset at midnight Pacific Time, not local
+     * midnight.
+     */
     private static final ZoneId QUOTA_RESET_ZONE = ZoneId.of("America/Los_Angeles");
 
     private final WebClient webClient;
@@ -58,12 +61,17 @@ public class GeminiClient {
     /**
      * Models that are rate-limited right now, and when that lifts.
      *
-     * <p>Covers both free-tier limits, because both make the model the wrong one to try next: a
-     * day's quota lifts at midnight Pacific, a per-minute limit in the seconds Google names. Only
-     * the daily one used to be remembered, so every single request kept rediscovering the
+     * <p>
+     * Covers both free-tier limits, because both make the model the wrong one to
+     * try next: a
+     * day's quota lifts at midnight Pacific, a per-minute limit in the seconds
+     * Google names. Only
+     * the daily one used to be remembered, so every single request kept
+     * rediscovering the
      * per-minute limit and waiting out its retry delay again.
      *
-     * <p>Kept in memory only: a restart costs one wasted call per model to rediscover.
+     * <p>
+     * Kept in memory only: a restart costs one wasted call per model to rediscover.
      */
     private final Map<String, Instant> unavailableUntil = new ConcurrentHashMap<>();
 
@@ -73,8 +81,7 @@ public class GeminiClient {
             @Value("${app.ai.gemini.model:gemini-3.5-flash}") String model,
             @Value("${app.ai.gemini.bulk-model:gemini-3.5-flash-lite}") String bulkModel,
             @Value("${app.ai.gemini.grading-model:gemini-3.5-flash-lite}") String gradingModel,
-            @Value("${app.ai.gemini.fallback-models:}") String fallbackModels
-    ) {
+            @Value("${app.ai.gemini.fallback-models:}") String fallbackModels) {
         this.webClient = webClientBuilder.baseUrl("https://generativelanguage.googleapis.com").build();
         this.apiKey = apiKey;
         this.model = model;
@@ -91,10 +98,14 @@ public class GeminiClient {
     }
 
     /**
-     * Which model each kind of request would use right now, and why any of them is out of play.
+     * Which model each kind of request would use right now, and why any of them is
+     * out of play.
      *
-     * <p>The chain reorders itself as limits are hit, and until now the only way to see that was
-     * to read the server log. Two questions about "which model is it on?" went unanswered for want
+     * <p>
+     * The chain reorders itself as limits are hit, and until now the only way to
+     * see that was
+     * to read the server log. Two questions about "which model is it on?" went
+     * unanswered for want
      * of this.
      */
     public List<ModelStatusDto> modelStatus() {
@@ -114,7 +125,10 @@ public class GeminiClient {
         return status;
     }
 
-    /** Lighter model for high-volume work (bulk vocabulary), which has a far larger free-tier quota. */
+    /**
+     * Lighter model for high-volume work (bulk vocabulary), which has a far larger
+     * free-tier quota.
+     */
     public String bulkModel() {
         return bulkModel;
     }
@@ -122,11 +136,17 @@ public class GeminiClient {
     /**
      * Model used to mark a learner's answer.
      *
-     * <p>Separate from {@link #model} because grading is the one call a learner waits on: the heavier
-     * model writes deeper feedback but took around 8s against roughly 1.6s, and a pause that long
-     * between answering and seeing the score is felt on every single sentence. Separate from
-     * {@link #bulkModel} too, even though both default to the same lighter model, so that changing
-     * how vocabulary is generated in bulk never silently changes how answers are marked.
+     * <p>
+     * Separate from {@link #model} because grading is the one call a learner waits
+     * on: the heavier
+     * model writes deeper feedback but took around 8s against roughly 1.6s, and a
+     * pause that long
+     * between answering and seeing the score is felt on every single sentence.
+     * Separate from
+     * {@link #bulkModel} too, even though both default to the same lighter model,
+     * so that changing
+     * how vocabulary is generated in bulk never silently changes how answers are
+     * marked.
      */
     public String gradingModel() {
         return gradingModel;
@@ -137,12 +157,17 @@ public class GeminiClient {
     }
 
     /**
-     * Sends a prompt and asks Gemini to reply with raw JSON, falling through to the next model when
+     * Sends a prompt and asks Gemini to reply with raw JSON, falling through to the
+     * next model when
      * the current one is out of quota.
      *
-     * <p>The free tier caps each model separately (the main one allows only 20 requests a day), so a
-     * single exhausted model must not take the whole feature down. Only quota and overload failures
-     * move on: a malformed request would fail identically everywhere, and retrying it would just
+     * <p>
+     * The free tier caps each model separately (the main one allows only 20
+     * requests a day), so a
+     * single exhausted model must not take the whole feature down. Only quota and
+     * overload failures
+     * move on: a malformed request would fail identically everywhere, and retrying
+     * it would just
      * burn the remaining models' quota too.
      */
     public String generateJson(String prompt, String startModel) {
@@ -171,11 +196,16 @@ public class GeminiClient {
     }
 
     /**
-     * The requested model first, then the other configured one, then any extras from config —
-     * except that models known to be out of quota for today sink to the end of the list.
+     * The requested model first, then the other configured one, then any extras
+     * from config —
+     * except that models known to be out of quota for today sink to the end of the
+     * list.
      *
-     * <p>They are moved rather than dropped, so a marker that turns out to be wrong costs one
-     * wasted call at worst instead of taking the feature down. {@code List.sort} is stable, so the
+     * <p>
+     * They are moved rather than dropped, so a marker that turns out to be wrong
+     * costs one
+     * wasted call at worst instead of taking the feature down. {@code List.sort} is
+     * stable, so the
      * configured order still holds inside each group.
      */
     List<String> modelChain(String startModel) {
@@ -190,7 +220,10 @@ public class GeminiClient {
         return chain;
     }
 
-    /** Notes how long this model is out of play, when the failure said anything about it. */
+    /**
+     * Notes how long this model is out of play, when the failure said anything
+     * about it.
+     */
     void rememberFailure(String model, GeminiException ex) {
         rememberUnavailable(model, ex);
     }
@@ -228,7 +261,10 @@ public class GeminiClient {
         return false;
     }
 
-    /** Says which models were tried, so "hết quota" does not look like a single-model problem. */
+    /**
+     * Says which models were tried, so "hết quota" does not look like a
+     * single-model problem.
+     */
     private GeminiException withTriedModels(GeminiException ex, List<String> chain, int reached) {
         if (reached == 0) {
             return ex;
@@ -240,7 +276,8 @@ public class GeminiClient {
     }
 
     /**
-     * One request to one model. Asks Gemini to reply with raw JSON (via responseMimeType) and
+     * One request to one model. Asks Gemini to reply with raw JSON (via
+     * responseMimeType) and
      * returns that JSON as a string for the caller to parse into its own DTO.
      */
     @SuppressWarnings("unchecked")
@@ -251,8 +288,7 @@ public class GeminiClient {
 
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("responseMimeType", "application/json")
-        );
+                "generationConfig", Map.of("responseMimeType", "application/json"));
 
         Map<String, Object> response;
         try {
@@ -268,7 +304,8 @@ public class GeminiClient {
             Throwable root = rootCause(ex);
             log.warn("Gemini request failed: {}", root.toString());
             int status = root instanceof WebClientResponseException apiError
-                    ? apiError.getStatusCode().value() : 0;
+                    ? apiError.getStatusCode().value()
+                    : 0;
             boolean outOfDailyQuota = isDailyQuota(root);
             throw new GeminiException(describe(root, model, outOfDailyQuota), root, status,
                     outOfDailyQuota, rateLimitPause(root));
@@ -305,14 +342,20 @@ public class GeminiClient {
     }
 
     /**
-     * Retries transient failures. For 429 the free tier tells us how long to wait (often ~45s),
-     * so we honour that instead of a short fixed backoff which would just burn the quota further.
+     * Retries transient failures. For 429 the free tier tells us how long to wait
+     * (often ~45s),
+     * so we honour that instead of a short fixed backoff which would just burn the
+     * quota further.
      */
     /**
-     * @param hasFallback whether another model is queued behind this one. When there is, a rate
-     *                    limit is not waited out: switching takes a second, while Google's
-     *                    suggested pause is tens of seconds and applies to this model alone.
-     *                    Waiting only makes sense as a last resort, with nothing else to try.
+     * @param hasFallback whether another model is queued behind this one. When
+     *                    there is, a rate
+     *                    limit is not waited out: switching takes a second, while
+     *                    Google's
+     *                    suggested pause is tens of seconds and applies to this
+     *                    model alone.
+     *                    Waiting only makes sense as a last resort, with nothing
+     *                    else to try.
      */
     private Retry retrySpec(boolean hasFallback) {
         return Retry.from(signals -> signals.flatMap(signal -> {
@@ -326,8 +369,10 @@ public class GeminiClient {
                 log.warn("Gemini het quota ngay — bo qua retry, doi model ngay");
                 return Mono.<Long>error(failure);
             }
-            // Same for an overloaded model: 503 is about this endpoint, and another model is a
-            // second away while the backoff here runs to seconds. Timeouts and dropped connections
+            // Same for an overloaded model: 503 is about this endpoint, and another model
+            // is a
+            // second away while the backoff here runs to seconds. Timeouts and dropped
+            // connections
             // are not in this list — those are the network, which every model shares.
             if (hasFallback && (rateLimited || isOverloaded(failure))) {
                 log.warn("Gemini tu choi ({}) — doi model ngay thay vi cho",
@@ -345,7 +390,9 @@ public class GeminiClient {
         }));
     }
 
-    /** How long a rate limit says to wait, or null when this is not a rate limit. */
+    /**
+     * How long a rate limit says to wait, or null when this is not a rate limit.
+     */
     private Duration rateLimitPause(Throwable failure) {
         if (!isRateLimited(failure)) {
             return null;
@@ -365,7 +412,10 @@ public class GeminiClient {
         return Duration.ofSeconds(Math.min(2L * attempt * attempt, 15));
     }
 
-    /** Google returns a RetryInfo detail plus a "Please retry in 45.7s." hint in the message. */
+    /**
+     * Google returns a RetryInfo detail plus a "Please retry in 45.7s." hint in the
+     * message.
+     */
     private Duration parseRetryDelay(String responseBody) {
         if (responseBody == null || responseBody.isBlank()) {
             return null;
@@ -389,16 +439,25 @@ public class GeminiClient {
     }
 
     /**
-     * Whether a 429 means "nothing left today" rather than "too fast, slow down". The two need
-     * opposite handling, and Google says which one it hit in the QuotaFailure violations it
-     * returns, naming them like {@code GenerateRequestsPerDayPerProjectPerModel-FreeTier} against
+     * Whether a 429 means "nothing left today" rather than "too fast, slow down".
+     * The two need
+     * opposite handling, and Google says which one it hit in the QuotaFailure
+     * violations it
+     * returns, naming them like
+     * {@code GenerateRequestsPerDayPerProjectPerModel-FreeTier} against
      * {@code ...PerMinute...}.
      *
-     * <p>Rather than depend on one field keeping that exact name, this scans every text value of
-     * the violation. It stays inside the structured violation on purpose: the human-readable
-     * message often mentions the daily limit even when the per-minute one is what was hit.
+     * <p>
+     * Rather than depend on one field keeping that exact name, this scans every
+     * text value of
+     * the violation. It stays inside the structured violation on purpose: the
+     * human-readable
+     * message often mentions the daily limit even when the per-minute one is what
+     * was hit.
      *
-     * <p>Anything unrecognised counts as per-minute, which merely keeps the old waiting behaviour.
+     * <p>
+     * Anything unrecognised counts as per-minute, which merely keeps the old
+     * waiting behaviour.
      * The opposite default would bench a model that still has quota left.
      */
     boolean isDailyQuota(Throwable ex) {
@@ -438,7 +497,10 @@ public class GeminiClient {
         return ex instanceof WebClientResponseException apiError && apiError.getStatusCode().value() == 429;
     }
 
-    /** Turns the underlying transport/API failure into a message that says what actually went wrong. */
+    /**
+     * Turns the underlying transport/API failure into a message that says what
+     * actually went wrong.
+     */
     private String describe(Throwable ex, String usedModel, boolean outOfDailyQuota) {
         if (ex instanceof TimeoutException) {
             return "Gemini phản hồi quá lâu (quá 90 giây) — thử giảm số từ mỗi lần sinh";
@@ -452,10 +514,10 @@ public class GeminiClient {
             return switch (status) {
                 case 429 -> outOfDailyQuota
                         ? "Model '" + usedModel + "' đã dùng hết quota miễn phí của hôm nay "
-                          + "(reset vào nửa đêm giờ Thái Bình Dương)." + detail
+                                + "(reset vào nửa đêm giờ Thái Bình Dương)." + detail
                         : "Chạm giới hạn số request mỗi phút của Gemini cho model '" + usedModel
-                          + "' — đã chờ và thử lại " + MAX_RATE_LIMIT_RETRIES
-                          + " lần vẫn bị chặn." + detail;
+                                + "' — đã chờ và thử lại " + MAX_RATE_LIMIT_RETRIES
+                                + " lần vẫn bị chặn." + detail;
                 case 503 -> "Gemini đang quá tải (503) — đã thử lại " + MAX_TRANSIENT_RETRIES
                         + " lần vẫn không được, thử lại sau ít phút." + detail;
                 case 500, 502, 504 -> "Gemini gặp lỗi máy chủ (" + status + ") — thử lại sau." + detail;
@@ -468,7 +530,10 @@ public class GeminiClient {
         return ex.getMessage() == null ? ex.toString() : ex.getMessage();
     }
 
-    /** Google returns {"error": {"message": "..."}} — surface that text when present. */
+    /**
+     * Google returns {"error": {"message": "..."}} — surface that text when
+     * present.
+     */
     private String extractApiMessage(String responseBody) {
         if (responseBody == null || responseBody.isBlank()) {
             return "";
@@ -493,7 +558,8 @@ public class GeminiClient {
         if (ex instanceof TimeoutException) {
             return true;
         }
-        // A reset or dropped connection says nothing about the request — retrying is worth a try.
+        // A reset or dropped connection says nothing about the request — retrying is
+        // worth a try.
         if (ex instanceof java.net.SocketException || ex instanceof WebClientRequestException) {
             return true;
         }
