@@ -20,6 +20,24 @@ public final class CjkText {
     private CjkText() {
     }
 
+    /**
+     * Whether the text contains at least one Han character.
+     *
+     * <p>Cheap guard against content that is Chinese in name only. Ten grammar lessons shipped
+     * with worked examples whose "Chinese" line was the Vietnamese prompt, under invented pinyin,
+     * because the slide they were imported from was an exercise sheet with no model answers at
+     * all. A generated drill once came back answered in English prose. Neither survives this
+     * check, and unlike an instruction in a prompt it cannot be ignored by the model.
+     *
+     * <p>Written against the Unicode script rather than a regex on purpose: the pattern would be
+     * {@code "\\p{IsHan}"}, and a single backslash there compiles to a different thing entirely.
+     * That exact slip has already cost this project an outage.
+     */
+    public static boolean hasHan(String text) {
+        return text != null && text.codePoints()
+                .anyMatch(cp -> Character.UnicodeScript.of(cp) == Character.UnicodeScript.HAN);
+    }
+
     /** Removes spaces between Chinese characters, leaving other text untouched. */
     public static String tidy(String text) {
         if (text == null) {

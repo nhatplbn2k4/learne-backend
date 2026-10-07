@@ -2,6 +2,8 @@ package com.learn.learnE_Backend.grammar;
 
 import com.learn.learnE_Backend.ai.AiContentService;
 import com.learn.learnE_Backend.ai.dto.GeneratedGrammarLessonDto;
+import com.learn.learnE_Backend.common.CjkText;
+import com.learn.learnE_Backend.grammar.dto.GrammarContentDto;
 import com.learn.learnE_Backend.grammar.dto.GrammarGapRequestDto;
 import com.learn.learnE_Backend.grammar.dto.GrammarPointDto;
 import com.learn.learnE_Backend.vocabulary.Language;
@@ -69,13 +71,37 @@ public class GrammarGapService {
     @Transactional(readOnly = true)
     public GeneratedGrammarLessonDto draftLesson(Long gapId) {
         GrammarGapRequest gap = require(gapId);
-        return aiContentService.generateGrammarLesson(
+        GeneratedGrammarLessonDto draft = aiContentService.generateGrammarLesson(
                 gap.getLanguage(),
                 gap.getGrammarName(),
                 gap.getExamplePrompt(),
                 gap.getExampleAnswer(),
                 gap.getExplanation(),
                 catalogueFor(gap.getLanguage()));
+        return gap.getLanguage() == Language.CHINESE ? withUsableExamples(draft) : draft;
+    }
+
+    /**
+     * Drops worked examples whose Chinese line carries no Han character.
+     *
+     * <p>Ten lessons already shipped with the Vietnamese prompt sitting in the Chinese field under
+     * invented pinyin, and an admin reviewing a draft reads the Vietnamese first and sees nothing
+     * wrong. Checked here rather than asked for in the prompt, because this is the kind of rule a
+     * model can agree to and still break.
+     */
+    private static GeneratedGrammarLessonDto withUsableExamples(GeneratedGrammarLessonDto draft) {
+        List<GrammarContentDto.ExampleDto> examples = draft.examples() == null
+                ? List.of()
+                : draft.examples().stream().filter(e -> CjkText.hasHan(e.target())).toList();
+
+        if (examples.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "AI tra ve ban nhap khong co vi du tieng Trung nao dung - hay sinh lai");
+        }
+        return new GeneratedGrammarLessonDto(
+                draft.code(), draft.title(), draft.summary(), draft.formula(),
+                draft.components(), examples, draft.notes(), draft.difficulty());
     }
 
     /**

@@ -41,4 +41,45 @@ class CjkTextTest {
         assertThat(CjkText.tidy(null)).isNull();
         assertThat(CjkText.tidy("  ")).isEmpty();
     }
+
+    // ---- hasHan: the guard against content that is Chinese in name only ----
+
+    @Test
+    void recognisesHanCharacters() {
+        assertThat(CjkText.hasHan("因为今天下雨，所以我们不去公园。")).isTrue();
+    }
+
+    /** The shape ten lessons actually shipped in: the Vietnamese prompt in the Chinese field. */
+    @Test
+    void vietnameseAloneIsNotChinese() {
+        assertThat(CjkText.hasHan("Vì hôm nay trời mưa, nên chúng tôi không đi công viên.")).isFalse();
+    }
+
+    /** Pinyin reads as Chinese to a careless eye and carries no Han at all. */
+    @Test
+    void pinyinAloneIsNotChinese() {
+        assertThat(CjkText.hasHan("Yīnwèi jīntiān xià yǔ, suǒyǐ wǒmen bù qù gōngyuán.")).isFalse();
+    }
+
+    /** A generated drill once came back answered like this. */
+    @Test
+    void englishProseIsNotChinese() {
+        assertThat(CjkText.hasHan("Because body not good, so he asked leave one day")).isFalse();
+    }
+
+    @Test
+    void oneHanCharacterAmongOtherScriptsIsEnough() {
+        assertThat(CjkText.hasHan("dùng 因为 ở đầu câu")).isTrue();
+    }
+
+    @Test
+    void punctuationAndDigitsAloneAreNotChinese() {
+        assertThat(CjkText.hasHan("，。？！ 123")).isFalse();
+    }
+
+    @Test
+    void nullAndBlankAreNotChinese() {
+        assertThat(CjkText.hasHan(null)).isFalse();
+        assertThat(CjkText.hasHan("   ")).isFalse();
+    }
 }

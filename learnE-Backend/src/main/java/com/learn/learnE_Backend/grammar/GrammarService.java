@@ -320,8 +320,16 @@ public class GrammarService {
 
         int nextOrder = request.replaceOrDefault() ? 0 : (int) exerciseRepository.countByLesson_Id(lessonId);
         List<GrammarExercise> rows = new ArrayList<>();
+        boolean chinese = lesson.getLanguage() == Language.CHINESE;
         for (GeneratedSentencesDto.GeneratedSentenceDto item : generated.sentences()) {
             if (isBlank(item.promptVi()) || isBlank(item.answerTarget())) {
+                continue;
+            }
+            // A Chinese answer with no Han character is not an answer. One came back as English
+            // prose - "Because body not good, so he asked leave one day" - and sat in the drill
+            // set unanswerable until someone read it.
+            if (chinese && !CjkText.hasHan(item.answerTarget())) {
+                log.warn("Bo cau bai tap khong co chu Han cho bai {}: {}", lessonId, item.answerTarget());
                 continue;
             }
             rows.add(GrammarExercise.builder()
